@@ -1,0 +1,22 @@
+service:
+  type: ClusterIP
+  ports:
+    healthz:
+      port: "3306"
+      targetPort: "3306"
+      protocol: TCP 
+
+deployment:
+  namespace: "taskhub"
+  repository: "mysql"
+  pullPolicy: Always
+  tag: "8.0.39"
+  ports:
+    healthz:
+      port: "3306"
+      protocol: TCP 
+  env:
+    MYSQL_DATABASE: task
+    MYSQL_PASSWORD: root
+    MYSQL_ROOT_PASSWORD: root
+    MYSQL_ALLOW_EMPTY_PASSWORD: yes

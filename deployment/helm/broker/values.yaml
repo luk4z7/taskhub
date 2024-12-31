@@ -1,0 +1,24 @@
+service:
+  type: ClusterIP
+  ports:
+    healthz:
+      port: "6379"
+      targetPort: "6379"
+      protocol: TCP 
+
+deployment:
+  namespace: "taskhub"
+  repository: "redis"
+  pullPolicy: Always
+  tag: "6.2-alpine"
+  ports:
+    healthz:
+      port: "6379"
+      protocol: TCP 
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi

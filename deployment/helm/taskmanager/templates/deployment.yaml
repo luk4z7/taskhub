@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "template.name" . }}
+  labels:
+    {{- include "template.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "template.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "template.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name:  {{ include "template.name" . }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.deployment.repository }}:{{ .Values.deployment.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.deployment.pullPolicy }}
+          ports:
+            {{- range $key, $values := .Values.deployment.ports  }}  
+              - name: {{ $key }}
+                containerPort: {{ $values.port }}
+                protocol: {{ $values.protocol }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.deployment.healthz.path }}
+              port: {{ .Values.deployment.healthz.port }}
+            initialDelaySeconds: {{ .Values.deployment.healthz.livenessInitialDelaySeconds }}
+            failureThreshold: {{ .Values.deployment.healthz.livenessThreshold }}
+            periodSeconds: {{ .Values.deployment.healthz.livenessPeriod }}
+          resources:
+            {{- toYaml .Values.deployment.resources | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "template.name" . }}
+                optional: false
+

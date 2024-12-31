@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  broker:
+    container_name: broker
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+  db:
+    container_name: db
+    image: mysql:8.0.39
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: task
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ALLOW_EMPTY_PASSWORD: no
+  notificationhub:
+    container_name: notificationhub
+    image: notificationhub
+    build: .
+    command: /home/bin
+    depends_on:
+      - broker
+    environment:
+      REDIS_ADDR: broker:6379
+  taskmanager:
+    container_name: taskmanager
+    image: taskmanager
+    ports:
+      - "8080:8080"
+    build: .
+    command: /home/bin
+    depends_on:
+      - db
+      - broker
+    environment:
+      REDIS_ADDR: broker:6379
+      MYSQL_DATABASE: "task"
+      MYSQL_USERNAME: "root"
+      MYSQL_PASSWORD: "root"
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      MYSQL_MAX_IDLE_CONNS: "50"
+      MYSQL_MAX_OPEN_CONNS: "50"

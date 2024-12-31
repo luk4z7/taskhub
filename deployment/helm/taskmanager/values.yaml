@@ -1,0 +1,48 @@
+service:
+  type: ClusterIP
+  ports:
+    healthz:
+      port: "8080"
+      targetPort: "8080"
+      protocol: TCP 
+
+deployment:
+  namespace: "taskhub"
+  repository: "taskmanager"
+  pullPolicy: Never
+  tag: "latest"
+  ports:
+    healthz:
+      port: "8080"
+      protocol: TCP 
+  healthz:
+    path: "/health"
+    port: 8080
+    livenessInitialDelaySeconds: 70
+    livenessThreshold: 4
+    livenessPeriod: 15
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  env:
+    REDIS_ADDR: broker:6379
+    MYSQL_DATABASE: task
+    MYSQL_USERNAME: root
+    MYSQL_PASSWORD: root
+    MYSQL_HOST: db
+    MYSQL_PORT: 3306
+    MYSQL_MAX_IDLE_CONNS: 50
+    MYSQL_MAX_OPEN_CONNS: 50
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+
+securityContext:
+  readOnlyRootFilesystem: true
+

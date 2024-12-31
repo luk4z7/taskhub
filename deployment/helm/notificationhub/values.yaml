@@ -1,0 +1,22 @@
+deployment:
+  namespace: "taskhub"
+  repository: "notificationhub"
+  pullPolicy: Never
+  tag: "latest"
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  env:
+    REDIS_ADDR: broker:6379
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+
+securityContext:
+  readOnlyRootFilesystem: true
