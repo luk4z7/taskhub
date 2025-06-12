@@ -4,14 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log" // Standard Go log package
+	"sync" // Added for sync.WaitGroup
 	"time"
 
 	"github.com/luk4z7/messages"
-
-	"log" // Standard Go log package
-	// "time" // Removed redundant import
-
-	// "github.com/luk4z7/messages" // Removed redundant import
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
@@ -91,36 +88,55 @@ func NewEventBus(pub message.Publisher) (*cqrs.EventBus, error) {
 }
 
 func (w *Worker) Run(ctx context.Context) error {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	go func() {
-		for msg := range w.queue {
-			log.Printf("Processing message from queue. TracingID: %s, Data Type: %T", msg.TracingID, msg.Data)
+		defer wg.Done()
+		defer log.Println("Worker internal queue processing goroutine truly finished.") // Renamed for clarity
 
-			switch data := msg.Data.(type) {
-			case messages.PrintNotification:
-				payload, err := json.Marshal(data)
-				if err != nil {
-					log.Printf("ERROR: JSON marshal failed for PrintNotification. TracingID: %s, Error: %v", msg.TracingID, err)
-					// Decide if to continue or requeue, for now, it just logs and drops.
-					// If requeue is needed: w.Send(msg); continue;
-					continue
+		for {
+			select {
+			case msg, ok := <-w.queue:
+				if !ok {
+					log.Println("Worker queue channel closed, exiting processing goroutine.")
+					return
 				}
+				log.Printf("Processing message from queue. TracingID: %s, Data Type: %T", msg.TracingID, msg.Data)
 
-				watermillMsg := message.NewMessage(watermill.NewUUID(), payload)
-				watermillMsg.Metadata.Set("tracing_id", msg.TracingID)
-				watermillMsg.Metadata.Set("type", "NotificationConfirmed") // This sets the topic for eventBus
+				switch data := msg.Data.(type) {
+				case messages.PrintNotification:
+					payload, err := json.Marshal(data)
+					if err != nil {
+						log.Printf("ERROR: JSON marshal failed for PrintNotification. TracingID: %s, Error: %v", msg.TracingID, err)
+						continue
+					}
 
-				if err := w.eventBus.Publish(ctx, watermillMsg); err != nil {
-					log.Printf("ERROR: Failed to publish NotificationConfirmed event. TracingID: %s, Error: %v. Re-queueing.", msg.TracingID, err)
-					w.Send(msg) // Re-queue
-				} else {
-					log.Printf("Successfully published NotificationConfirmed event. TracingID: %s", msg.TracingID)
+					watermillMsg := message.NewMessage(watermill.NewUUID(), payload)
+					watermillMsg.Metadata.Set("tracing_id", msg.TracingID)
+					watermillMsg.Metadata.Set("type", "NotificationConfirmed")
+
+					if err := w.eventBus.Publish(ctx, watermillMsg); err != nil {
+						log.Printf("ERROR: Failed to publish NotificationConfirmed event. TracingID: %s, Error: %v. Re-queueing.", msg.TracingID, err)
+						// Check context before re-queueing to prevent sending to a closed queue if context is also done.
+						select {
+						case <-ctx.Done():
+							log.Println("Context cancelled while attempting to re-queue failed publish. Message dropped.")
+						default:
+							w.Send(msg) // Re-queue
+						}
+					} else {
+						log.Printf("Successfully published NotificationConfirmed event. TracingID: %s", msg.TracingID)
+					}
+
+				default:
+					log.Printf("ERROR: Unknown message type in queue. TracingID: %s, Data: %+v", msg.TracingID, msg.Data)
 				}
-
-			default:
-				log.Printf("ERROR: Unknown message type in queue. TracingID: %s, Data: %+v", msg.TracingID, msg.Data)
+			case <-ctx.Done():
+				log.Println("Worker context cancelled, exiting processing goroutine.")
+				return
 			}
 		}
-		log.Println("Worker internal queue processing goroutine finished.")
 	}()
 
 	// Use Watermill's standard logger for retry middleware as well
@@ -134,13 +150,22 @@ func (w *Worker) Run(ctx context.Context) error {
 	}.Middleware)
 
 	log.Println("Worker router starting...")
-	err := w.router.Run(ctx)
-	if err != nil {
-		log.Printf("Worker router finished with error: %v", err)
+	routerErr := w.router.Run(ctx) // Store router error
+
+	if routerErr != nil {
+		log.Printf("Worker router finished with error: %v", routerErr)
 	} else {
 		log.Println("Worker router finished gracefully.")
 	}
-	return err
+
+	log.Println("Signaling queue processing goroutine to stop by closing queue...")
+	close(w.queue) // Close w.queue to ensure the for/select loop in the goroutine terminates
+
+	log.Println("Waiting for queue processing goroutine to finish...")
+	wg.Wait() // Wait for the goroutine to actually finish
+	log.Println("All worker components shut down.")
+
+	return routerErr // Return the error from router.Run (if any)
 }
 
 func (w *Worker) Router() *message.Router {
