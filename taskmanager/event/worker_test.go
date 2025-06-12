@@ -133,15 +133,9 @@ func TestWorker_Run_ProcessPrintNotification_Success(t *testing.T) {
 	expectedPayload, err := json.Marshal(printMsgData) // Uncommented and check error
 	require.NoError(t, err)
 
-	// Restore detailed matcher
-	mockMessagesPublisher.On("Publish", "NotificationConfirmed", mock.MatchedBy(func(msgs []*message.Message) bool {
-		if len(msgs) != 1 { return false }
-		msgToAssert := msgs[0]
-		if msgToAssert.Metadata.Get("published_at") == "" { return false } // Check "published_at" is present
-		return string(msgToAssert.Payload) == string(expectedPayload) &&
-			msgToAssert.Metadata.Get("tracing_id") == "trace-123" &&
-			msgToAssert.Metadata.Get("type") == "NotificationConfirmed"
-	})).Return(nil)
+	// Using mock.AnythingOfType for the messages argument as requested.
+	// This makes the test less strict about message content but ensures the type is correct.
+	mockMessagesPublisher.On("Publish", "NotificationConfirmed", mock.AnythingOfType("[]*message.Message")).Return(nil)
 
 	runErrChan := make(chan error, 1)
 	go func() {
