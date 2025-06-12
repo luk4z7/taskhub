@@ -1,0 +1,13 @@
+mode: atomic
+github.com/luk4z7/notificationhub/main.go:13.13,17.16 4 0
+github.com/luk4z7/notificationhub/main.go:17.16,18.13 1 0
+github.com/luk4z7/notificationhub/main.go:21.2,25.17 4 0
+github.com/luk4z7/notificationhub/service/application.go:22.29,31.115 2 0
+github.com/luk4z7/notificationhub/service/application.go:31.115,36.5 1 0
+github.com/luk4z7/notificationhub/service/application.go:37.105,39.5 1 0
+github.com/luk4z7/notificationhub/service/application.go:44.2,44.16 1 0
+github.com/luk4z7/notificationhub/service/application.go:44.16,45.13 1 0
+github.com/luk4z7/notificationhub/service/application.go:48.2,54.67 2 0
+github.com/luk4z7/notificationhub/service/application.go:54.67,55.13 1 0
+github.com/luk4z7/notificationhub/service/application.go:58.2,58.29 1 0
+github.com/luk4z7/notificationhub/service/application.go:58.30,58.31 0 0
