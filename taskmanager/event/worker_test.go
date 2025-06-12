@@ -2,7 +2,7 @@ package event
 
 import (
 	"context"
-	"encoding/json" // Re-added
+	// "encoding/json" // Will be removed as expectedPayload is removed
 	"errors"
 	"testing"
 	"time"
@@ -130,8 +130,8 @@ func TestWorker_Run_ProcessPrintNotification_Success(t *testing.T) {
 		TracingID: "trace-123",
 		Data:      printMsgData,
 	}
-	expectedPayload, err := json.Marshal(printMsgData) // Uncommented and check error
-	require.NoError(t, err)
+	// expectedPayload, err := json.Marshal(printMsgData) // Removed as it's unused
+	// require.NoError(t, err) // Removed as it's unused
 
 	// Using mock.AnythingOfType for the messages argument as requested.
 	// This makes the test less strict about message content but ensures the type is correct.
