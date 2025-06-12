@@ -55,7 +55,7 @@ func main() {
 	defer cancel()
 
 	g, ctx := errgroup.WithContext(ctx)
-	w := event.NewWorker(watermillLogger, publisher, router)
+	w := event.NewWorker(publisher, router) // Removed watermillLogger
 	dbClient, err := db.MySqlHandler()
 	if err != nil {
 		panic(err)
