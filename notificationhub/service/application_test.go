@@ -64,14 +64,11 @@ func TestNewApplication_PanicOnMissingRedisAddr(t *testing.T) {
 	require.NoError(t, err)
 
 	// NewApplication is expected to panic because redisstream.NewSubscriber
-	// (called within SubscriberConstructor) will fail if REDIS_ADDR is empty,
-	// leading to an error in NewEventProcessorWithConfig, which then panics.
-	// The redis client `redis.NewClient` itself might not fail if ADDR is empty,
-	// but the subscriber's attempt to use it will.
-	// The panic message might come from redisstream.NewSubscriber or cqrs.NewEventProcessorWithConfig
-	assert.Panics(t, func() {
+	// (called within SubscriberConstructor) will fail if REDIS_ADDR is empty.
+	// NewApplication now has an explicit panic for this.
+	assert.PanicsWithValue(t, "REDIS_ADDR environment variable is not set or is empty", func() {
 		service.NewApplication(context.Background(), router, logger)
-	}, "NewApplication should panic if REDIS_ADDR is missing or invalid, leading to subscriber init failure")
+	}, "NewApplication should panic with specific message if REDIS_ADDR is not set")
 }
 
 func TestNewApplication_PanicOnRouterNil(t *testing.T) {
@@ -89,9 +86,9 @@ func TestNewApplication_PanicOnRouterNil(t *testing.T) {
 
 	// cqrs.NewEventProcessorWithConfig expects a non-nil router.
 	// If router is nil, it should panic.
-	assert.PanicsWithValue(t, "router is nil", func() {
+	assert.PanicsWithValue(t, "missing router", func() { // Changed "router is nil" to "missing router"
 		service.NewApplication(context.Background(), nil, logger)
-	}, "NewApplication should panic if router is nil, as NewEventProcessorWithConfig will panic")
+	}, "NewApplication should panic if router is nil, as NewEventProcessorWithConfig will panic with 'missing router'")
 }
 
 // Testing failure of ep.AddHandlers is harder without deeper mocking

@@ -21,8 +21,13 @@ func NewApplication(
 
 ) (app.Application, func()) {
 
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		panic("REDIS_ADDR environment variable is not set or is empty")
+	}
+
 	rdb := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_ADDR"),
+		Addr: redisAddr, // Use the validated redisAddr
 	})
 
 	ep, err := cqrs.NewEventProcessorWithConfig(

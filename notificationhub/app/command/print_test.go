@@ -1,16 +1,17 @@
 package command_test
 
 import (
-	"bytes"
+	// "bytes" // Removed unused import
 	"context"
 	"encoding/json"
-	"errors" // For direct error comparison if needed, though testify is better
-	"fmt"
+	// "errors" // Removed unused import
+	// "fmt" // Removed unused import
 	"io"
 	"log"
 	"os"
 	"strings"
 	"testing"
+	"time" // Added for PublishedAt
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/luk4z7/messages"
@@ -62,7 +63,7 @@ func TestPrintHandler_Handle_Success(t *testing.T) {
 	ctx := context.Background()
 
 	notificationPayload := messages.PrintNotification{
-		Header:  messages.Header{ID: "msg-id-123", Timestamp: messages.Timestamp{Seconds: 1678886400}}, // Example timestamp
+		Header:  messages.Header{ID: "msg-id-123", PublishedAt: time.Now().Format(time.RFC3339)}, // Corrected Header init
 		Message: "Hello, this is a test notification!",
 		Owner:   "test-owner",
 	}
@@ -71,18 +72,10 @@ func TestPrintHandler_Handle_Success(t *testing.T) {
 
 	msg := message.NewMessage("test-uuid", payloadBytes)
 
-	var output string
-	// The Handle function uses fmt.Println(data), which prints to stdout.
-	// We need to capture stdout to verify the output.
-	// Also, fmt.Println adds a newline.
-	// The default Stringer for structs usually prints like {Field1:Value1 Field2:Value2 ...}
-	// For messages.PrintNotification, it will be something like {{ID:msg-id-123 Timestamp:{Seconds:1678886400}} Hello, this is a test notification! test-owner}
-	// We should construct the expected string carefully.
+	// var output string // Removed unused variable 'output'
 
-	// Construct the expected string output from fmt.Println(notificationPayload)
-	// Note: The exact format of fmt.Println(struct) can be a bit unpredictable if struct fields change.
-	// A more robust way might be to check for key parts of the string.
-	expectedOutput := fmt.Sprintf("%+v", notificationPayload) // Using %+v for more detail, similar to how structs are often printed.
+	// Construct the expected string output from fmt.Println(notificationPayload) - This variable is also unused with current assertion strategy.
+	// expectedOutput := fmt.Sprintf("%+v", notificationPayload)
 
 	log.SetOutput(io.Discard) // Suppress log output from other parts if any, during capture
 	defer log.SetOutput(os.Stderr) // Restore log output
@@ -97,8 +90,7 @@ func TestPrintHandler_Handle_Success(t *testing.T) {
 	assert.Contains(t, trimmedOutput, notificationPayload.Message, "Captured output should contain the message")
 	assert.Contains(t, trimmedOutput, notificationPayload.Owner, "Captured output should contain the owner")
 	assert.Contains(t, trimmedOutput, notificationPayload.Header.ID, "Captured output should contain the header ID")
-	// A more exact match if needed, but contains is often safer for fmt.Println outputs:
-	// assert.Equal(t, expectedOutput, trimmedOutput)
+	assert.Contains(t, trimmedOutput, notificationPayload.Header.PublishedAt, "Captured output should contain the PublishedAt timestamp")
 }
 
 func TestPrintHandler_Handle_NotAMessage(t *testing.T) {
