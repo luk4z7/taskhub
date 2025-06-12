@@ -85,10 +85,21 @@ func TestNewApplication_PanicOnRouterNil(t *testing.T) {
 	logger := watermill.NewStdLogger(false, false)
 
 	// cqrs.NewEventProcessorWithConfig expects a non-nil router.
-	// If router is nil, it should panic.
-	assert.PanicsWithValue(t, "missing router", func() { // Changed "router is nil" to "missing router"
+	// If router is nil, it should panic directly.
+	// The test output indicates the panic value is indeed "missing router".
+	// Let's use a more robust way to check this if PanicsWithValue is tricky.
+	var recoveredValue interface{}
+	func() {
+		defer func() {
+			recoveredValue = recover()
+		}()
 		service.NewApplication(context.Background(), nil, logger)
-	}, "NewApplication should panic if router is nil, as NewEventProcessorWithConfig will panic with 'missing router'")
+	}()
+	require.NotNil(t, recoveredValue, "Expected a panic when router is nil")
+	// Check that the panic value is an error and its message is "missing router"
+	err, ok := recoveredValue.(error)
+	require.True(t, ok, "Panic value should be an error type")
+	assert.EqualError(t, err, "missing router", "Panic error message should be 'missing router'")
 }
 
 // Testing failure of ep.AddHandlers is harder without deeper mocking

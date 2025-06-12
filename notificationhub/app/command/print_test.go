@@ -112,8 +112,7 @@ func TestPrintHandler_Handle_UnmarshalError(t *testing.T) {
 
 	err := handler.Handle(ctx, msg)
 	require.Error(t, err)
-	// Check that the error is a json unmarshaling error
-	// Example: "json: cannot unmarshal string into Go value of type messages.PrintNotification"
-	// We can check for a substring.
-	assert.Contains(t, err.Error(), "json: cannot unmarshal", "Error should be a JSON unmarshaling error")
+	// Check that the error is specifically a json.SyntaxError
+	var syntaxError *json.SyntaxError
+	require.ErrorAs(t, err, &syntaxError, "Error should be a json.SyntaxError")
 }
